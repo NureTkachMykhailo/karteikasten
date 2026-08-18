@@ -1,0 +1,33 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: karteikasten
+      POSTGRES_PASSWORD: karteikasten
+      POSTGRES_DB: karteikasten
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    # No host port published on purpose: backend reaches this over the
+    # internal docker network via "db:5432". Publishing 5432 to the host
+    # is what collided with a leftover container / local Postgres install.
+
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://karteikasten:karteikasten@db:5432/karteikasten
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
