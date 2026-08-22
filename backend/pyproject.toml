@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# UP042: CardType/CEFRLevel deliberately mix str+Enum, not enum.StrEnum — they
+# back a SQLAlchemy Enum() column and go straight into Pydantic responses as
+# plain strings; StrEnum's differences here aren't worth touching for a
+# cosmetic lint fix.
+ignore = ["UP042"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends(...)/Header(...) as parameter defaults is the documented,
+# idiomatic pattern (not a mutable-default bug) — see FastAPI's own docs.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

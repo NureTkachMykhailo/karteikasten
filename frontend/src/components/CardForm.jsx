@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useLang } from "../LangContext";
 import { LoaderDots } from "./UI";
 
 const TYPES = ["Wort", "Verb", "Phrase", "Grammatik"];
@@ -8,6 +9,7 @@ const LEVELS = ["A1", "A2", "B1", "B2", "C1"];
 const emptyForm = { front: "", back: "", example: "", note: "", type: "Wort", level: "A1", tags: "" };
 
 export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
+  const { t } = useLang();
   const [form, setForm] = useState(emptyForm);
   const [topic, setTopic] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -40,7 +42,7 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
 
   async function generate() {
     if (!topic.trim()) {
-      showToast("Bitte ein Thema eingeben");
+      showToast(t("enterTopic"));
       return;
     }
     setAiGenerating(true);
@@ -49,7 +51,7 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
     try {
       const res = await api("/ai/generate-card", { method: "POST", body: JSON.stringify({ topic: topic.trim() }) });
       if (res.rejected) {
-        setRejectReason(res.rejection_reason || "Thema unklar — bitte präzisieren.");
+        setRejectReason(res.rejection_reason || t("rejectFallback"));
         setAiGenerating(false);
         return;
       }
@@ -70,14 +72,14 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
       setFlashFields(new Set(fields));
       setTimeout(() => setFlashFields(new Set()), 1000);
     } catch (err) {
-      showToast("KI-Fehler: " + err.message);
+      showToast(`${t("aiError")}: ${err.message}`);
     }
     setAiGenerating(false);
   }
 
   async function save() {
     if (!form.front.trim() || !form.back.trim()) {
-      showToast("Vorder- und Rückseite sind Pflicht");
+      showToast(t("frontBackRequired"));
       return;
     }
     const payload = {
@@ -93,15 +95,15 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
     try {
       if (editingCard) {
         const updated = await api(`/cards/${editingCard.id}`, { method: "PUT", body: JSON.stringify(payload) });
-        showToast("Karte gespeichert");
+        showToast(t("cardSaved"));
         onSaved(updated);
       } else {
         const created = await api("/cards/", { method: "POST", body: JSON.stringify(payload) });
-        showToast("Karte angelegt");
+        showToast(t("cardCreated"));
         onSaved(created);
       }
     } catch (err) {
-      showToast("Fehler: " + err.message);
+      showToast(`${t("error")}: ${err.message}`);
     }
     setSaving(false);
   }
@@ -113,20 +115,18 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
   return (
     <div className="animate-fadeUp">
       <h1 className="font-mono text-[11px] tracking-[2px] uppercase text-brass font-semibold mb-3.5">
-        {editingCard ? "Karte bearbeiten" : "Neue Karte"}
+        {editingCard ? t("editCard") : t("newCard")}
       </h1>
 
       {!editingCard && (
         <div className={`bg-ink-3 border rounded-lg p-3 mb-4.5 ${aiGenerating ? "border-solid border-brass-dark ai-box-busy" : "border-dashed border-brass"}`}>
-          <div className="font-mono text-[10px] tracking-wide uppercase text-brass mb-2">
-            KI: Karten-Entwurf generieren
-          </div>
+          <div className="font-mono text-[10px] tracking-wide uppercase text-brass mb-2">{t("aiCardLabel")}</div>
           <div className="flex gap-2">
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               disabled={aiGenerating}
-              placeholder={"Thema oder Wort, z. B. „Bürgeramt Vokabular“"}
+              placeholder={t("aiTopicPlaceholder")}
               className="flex-1 px-2.5 py-2 rounded-md border border-[#3a3227] bg-ink text-cream text-[13px]"
             />
             <button
@@ -135,7 +135,7 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
               className="px-3 py-1.5 rounded-md bg-brass text-ink font-mono text-[10px] font-semibold uppercase
                          disabled:opacity-50 active:scale-[.97] transition-transform"
             >
-              {aiGenerating ? <LoaderDots /> : "Generieren"}
+              {aiGenerating ? <LoaderDots /> : t("generate")}
             </button>
           </div>
           {rejectReason && (
@@ -145,7 +145,7 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
           )}
           {duplicateWarning && (
             <div className="flex items-start gap-2 font-mono text-[11px] mt-2.5 px-2.5 py-1.5 rounded border border-stamp bg-stamp/10 text-stamp leading-relaxed animate-fadeUp">
-              ⚠ Ähnliche Karte existiert schon: „{duplicateWarning}" — Entwurf unten prüfen, bevor du speicherst.
+              ⚠ {t("duplicateWarning", duplicateWarning)}
             </div>
           )}
         </div>
@@ -153,60 +153,52 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
 
       <div className="space-y-3.5">
         <div>
-          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">
-            Vorderseite (Deutsch)
-          </label>
+          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("front")}</label>
           <input
             value={form.front}
             onChange={(e) => setField("front", e.target.value)}
-            placeholder="z. B. der Termin"
+            placeholder={t("frontPlaceholder")}
             className={`${fieldBase} ${flashClass("front")}`}
           />
         </div>
         <div>
-          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">
-            Rückseite (Übersetzung)
-          </label>
+          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("back")}</label>
           <input
             value={form.back}
             onChange={(e) => setField("back", e.target.value)}
-            placeholder="z. B. appointment"
+            placeholder={t("backPlaceholder")}
             className={`${fieldBase} ${flashClass("back")}`}
           />
         </div>
         <div>
-          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">
-            Beispielsatz
-          </label>
+          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("example")}</label>
           <textarea
             value={form.example}
             onChange={(e) => setField("example", e.target.value)}
-            placeholder="Ich habe einen Termin."
+            placeholder={t("examplePlaceholder")}
             className={`${fieldBase} min-h-[56px] ${flashClass("example")}`}
           />
         </div>
         <div>
-          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">
-            Grammatik-Notiz
-          </label>
+          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("note")}</label>
           <textarea
             value={form.note}
             onChange={(e) => setField("note", e.target.value)}
-            placeholder="maskulin, Plural: die Termine"
+            placeholder={t("notePlaceholder")}
             className={`${fieldBase} min-h-[56px] ${flashClass("note")}`}
           />
         </div>
         <div className="flex gap-2.5">
           <div className="flex-1">
-            <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">Typ</label>
+            <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("type")}</label>
             <select value={form.type} onChange={(e) => setField("type", e.target.value)} className={fieldBase}>
-              {TYPES.map((t) => (
-                <option key={t}>{t}</option>
+              {TYPES.map((ty) => (
+                <option key={ty}>{ty}</option>
               ))}
             </select>
           </div>
           <div className="flex-1">
-            <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">Niveau</label>
+            <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("level")}</label>
             <select value={form.level} onChange={(e) => setField("level", e.target.value)} className={fieldBase}>
               {LEVELS.map((l) => (
                 <option key={l}>{l}</option>
@@ -215,13 +207,11 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
           </div>
         </div>
         <div>
-          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">
-            Tags (Komma-getrennt)
-          </label>
+          <label className="block font-mono text-[10px] tracking-wide uppercase text-brass mb-1.5">{t("tags")}</label>
           <input
             value={form.tags}
             onChange={(e) => setField("tags", e.target.value)}
-            placeholder="Behörden, Alltag"
+            placeholder={t("tagsPlaceholder")}
             className={fieldBase}
           />
         </div>
@@ -234,7 +224,7 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
           className="flex-1 py-3.5 rounded-md bg-brass text-ink font-mono text-xs font-semibold uppercase tracking-wide
                      disabled:opacity-50 active:scale-[.97] transition-transform"
         >
-          {editingCard ? "Speichern" : "Karte anlegen"}
+          {editingCard ? t("save") : t("createCard")}
         </button>
         {editingCard && (
           <button
@@ -242,7 +232,7 @@ export function CardForm({ editingCard, onSaved, onCancel, showToast }) {
             className="py-3.5 px-5 rounded-md border border-[#3a3227] text-cream font-mono text-xs uppercase tracking-wide
                        active:scale-[.97] transition-transform"
           >
-            Abbrechen
+            {t("cancel")}
           </button>
         )}
       </div>

@@ -1,39 +1,41 @@
 import { useEffect, useState } from "react";
 import { BOX_BORDER } from "../helpers";
+import { useLang } from "../LangContext";
 import { LoaderDots } from "./UI";
 
 function DialoguePanel({ de, en }) {
+  const { t } = useLang();
   if (!de) return null;
   return (
     <div className="bg-paper text-ink-text rounded-lg p-4.5 mt-3.5 animate-fadeUp">
-      <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-brass-dark mb-2">Dialog</div>
+      <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-brass-dark mb-2">{t("dialogueLabel")}</div>
       <div className="font-display text-sm whitespace-pre-wrap leading-7">{de}</div>
       <div className="border-t border-dashed border-paper-line my-4" />
-      <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-brass-dark mb-2">Übersetzung</div>
+      <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-brass-dark mb-2">{t("translationLabel")}</div>
       <div className="font-display text-[13px] whitespace-pre-wrap leading-7 text-[#6b6050]">{en}</div>
     </div>
   );
 }
 
 function AiDialogueBox({ busy, onGenerate }) {
+  const { t } = useLang();
   return (
     <div className={`bg-ink-3 border rounded-lg p-3 mt-4.5 ${busy ? "border-solid border-brass-dark ai-box-busy" : "border-dashed border-brass"}`}>
-      <div className="font-mono text-[10px] tracking-wide uppercase text-brass mb-2">
-        KI: Dialog aus den fälligen Wörtern generieren
-      </div>
+      <div className="font-mono text-[10px] tracking-wide uppercase text-brass mb-2">{t("aiDialogueLabel")}</div>
       <button
         onClick={onGenerate}
         disabled={busy}
         className="w-full py-2 rounded-md border border-[#3a3227] text-cream font-mono text-[10px] uppercase tracking-wide
                    disabled:opacity-50 active:scale-[.97] transition-transform"
       >
-        {busy ? <LoaderDots /> : "Dialog generieren"}
+        {busy ? <LoaderDots /> : t("generateDialogue")}
       </button>
     </div>
   );
 }
 
 export function Review({ dueCards, allCards, aiGenerating, dialogueDe, dialogueEn, onGenerateDialogue, onRate }) {
+  const { t } = useLang();
   const [queue, setQueue] = useState([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -57,36 +59,34 @@ export function Review({ dueCards, allCards, aiGenerating, dialogueDe, dialogueE
     return (
       <div className="animate-fadeUp">
         <h1 className="font-mono text-[11px] tracking-[2px] uppercase text-brass font-semibold mb-3.5">
-          Wiederholen
+          {t("reviewTitle")}
         </h1>
         {dueCards.length === 0 ? (
           <>
             <div className="text-center py-10 px-5 text-muted">
-              <div className="font-display text-[15px] text-paper mb-1.5">Für heute nichts fällig</div>
-              Alle Karten sind aktuell. Du kannst trotzdem eine freie Runde üben.
+              <div className="font-display text-[15px] text-paper mb-1.5">{t("nothingDueToday")}</div>
+              {t("allCurrentHint")}
             </div>
             <button
               onClick={() => start(allCards)}
               className="w-full py-3 rounded-md border border-[#3a3227] text-cream font-mono text-xs uppercase tracking-wide
                          active:scale-[.97] transition-transform"
             >
-              Freie Übungsrunde (alle Karten)
+              {t("freePractice")}
             </button>
           </>
         ) : (
           <>
             <div className="text-center py-10 px-5 text-muted">
-              <div className="font-display text-[15px] text-paper mb-1.5">
-                {dueCards.length} Karte{dueCards.length === 1 ? "" : "n"} heute fällig
-              </div>
-              Tippe auf die Karte, um die Rückseite zu zeigen, dann bewerte dich selbst.
+              <div className="font-display text-[15px] text-paper mb-1.5">{t("dueTodayCount", dueCards.length)}</div>
+              {t("flipHint")}
             </div>
             <button
               onClick={() => start(dueCards)}
               className="w-full py-3.5 rounded-md bg-brass text-ink font-mono text-xs font-semibold uppercase tracking-wide
                          active:scale-[.97] transition-transform"
             >
-              Runde starten
+              {t("startRound")}
             </button>
           </>
         )}
@@ -101,9 +101,7 @@ export function Review({ dueCards, allCards, aiGenerating, dialogueDe, dialogueE
 
   return (
     <div className="animate-fadeUp">
-      <div className="font-mono text-[11px] text-muted text-center mb-3.5">
-        Karte {index + 1} / {queue.length}
-      </div>
+      <div className="font-mono text-[11px] text-muted text-center mb-3.5">{t("cardProgress", index + 1, queue.length)}</div>
       <div className="flip-scene">
         <div className={`flip-card ${flipped ? "flipped" : ""}`} onClick={() => setFlipped(true)}>
           <div className={`flip-face front bg-paper text-ink-text rounded-lg py-7.5 px-6 shadow-[0_6px_18px_rgba(0,0,0,.35)] flex flex-col justify-center border-t-[5px] ${border}`}>
@@ -112,11 +110,11 @@ export function Review({ dueCards, allCards, aiGenerating, dialogueDe, dialogueE
               <span className="w-2.5 h-2.5 rounded-full bg-ink opacity-[.18]" />
             </div>
             <div className="font-mono text-[10px] tracking-wide uppercase text-muted mb-4 text-center">
-              {card.type} · {card.level} · Fach {card.box}
+              {card.type} · {card.level} · {t("box")} {card.box}
             </div>
             <div className="font-display text-[28px] text-center leading-snug">{card.front}</div>
             <div className="font-mono text-[10px] text-muted text-center mt-5.5 tracking-wide uppercase">
-              antippen, um die Antwort zu zeigen
+              {t("tapToReveal")}
             </div>
           </div>
           <div className={`flip-face back bg-paper text-ink-text rounded-lg py-7.5 px-6 shadow-[0_6px_18px_rgba(0,0,0,.35)] flex flex-col justify-center border-t-[5px] ${border}`}>
@@ -138,19 +136,19 @@ export function Review({ dueCards, allCards, aiGenerating, dialogueDe, dialogueE
             onClick={() => rate("again")}
             className="flex-1 py-3 rounded-md bg-stamp text-paper font-mono text-xs font-semibold uppercase tracking-wide active:scale-[.97] transition-transform"
           >
-            Nochmal
+            {t("again")}
           </button>
           <button
             onClick={() => rate("good")}
             className="flex-1 py-3 rounded-md border border-[#3a3227] text-paper font-mono text-xs font-semibold uppercase tracking-wide active:scale-[.97] transition-transform"
           >
-            Kannte ich
+            {t("knewIt")}
           </button>
           <button
             onClick={() => rate("easy")}
             className="flex-1 py-3 rounded-md bg-brass text-ink font-mono text-xs font-semibold uppercase tracking-wide active:scale-[.97] transition-transform"
           >
-            Einfach
+            {t("easy")}
           </button>
         </div>
       )}

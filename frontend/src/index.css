@@ -4,6 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  button:not(:disabled) {
+    transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  }
+  button:not(:disabled):hover {
+    filter: brightness(1.1);
+  }
+  select:not(:disabled),
+  input:not(:disabled),
+  textarea:not(:disabled) {
+    transition: border-color 0.15s ease;
+  }
+  select:not(:disabled):hover,
+  input:not(:disabled):hover,
+  textarea:not(:disabled):hover {
+    border-color: #c99a3e;
+  }
+}
+
 html {
   background: #1c1815;
   overscroll-behavior-y: none;
@@ -24,9 +43,68 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.05;
+  opacity: 0.07;
   mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Slow-drifting warm glows, like reading-lamp light in a library — pure
+   decoration, sits behind all content (z-index 0, content wrappers use
+   z-10). Transform/opacity only so it stays cheap to render. */
+.bg-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bg-glow .glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+.glow-1 {
+  width: 440px;
+  height: 440px;
+  background: #c99a3e;
+  opacity: 0.13;
+  top: -140px;
+  left: -100px;
+  animation: driftA 16s ease-in-out infinite alternate;
+}
+.glow-2 {
+  width: 380px;
+  height: 380px;
+  background: #a13d2f;
+  opacity: 0.1;
+  bottom: -150px;
+  right: -110px;
+  animation: driftB 19s ease-in-out infinite alternate;
+}
+.glow-3 {
+  width: 320px;
+  height: 320px;
+  background: #7a8f6b;
+  opacity: 0.07;
+  top: 38%;
+  right: 8%;
+  animation: driftC 22s ease-in-out infinite alternate;
+}
+@keyframes driftA {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(110px, 80px) scale(1.25); }
+}
+@keyframes driftB {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(-100px, -70px) scale(1.2); }
+}
+@keyframes driftC {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-90px, 100px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-1, .glow-2, .glow-3 { animation: none; }
 }
 
 /* --- 3D flip card: Tailwind has no utilities for this, kept as plain CSS --- */
@@ -55,6 +133,9 @@ body::before {
 .flip-face.back {
   transform: rotateY(180deg);
   overflow-y: auto;
+}
+.flip-card:not(.flipped):hover .flip-face.front {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
 }
 
 /* AI-generation scan-line sweep, layered on top of the dashed ai-box border */

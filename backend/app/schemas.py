@@ -1,6 +1,5 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
@@ -41,23 +40,25 @@ class ReviewRequest(BaseModel):
 
 # --- AI: card generation -------------------------------------------------
 
+
 class GenerateCardRequest(BaseModel):
     topic: str  # e.g. a German word, a phrase, or a short topic description
 
 
 class GenerateCardResponse(BaseModel):
-    draft: Optional[dict] = None  # None when the topic was rejected as not meaningful
+    draft: dict | None = None  # None when the topic was rejected as not meaningful
     similar_cards: list[CardOut] = []  # top-5 nearest existing cards, for the user to review
     possible_duplicate: bool = False  # nearest card is closer than SIMILARITY_THRESHOLD
     rejected: bool = False
-    rejection_reason: Optional[str] = None  # set when rejected — in German, shown directly in the UI
+    rejection_reason: str | None = None  # set when rejected — in German, shown directly in the UI
 
 
 # --- AI: dialogue generation ----------------------------------------------
 
+
 class GenerateDialogueRequest(BaseModel):
     tags: list[str] = []
-    level: Optional[CEFRLevel] = None
+    level: CEFRLevel | None = None
     due_today: bool = False
     limit: int = 8
 
@@ -69,6 +70,7 @@ class GenerateDialogueResponse(BaseModel):
 
 
 # --- Auth ------------------------------------------------------------------
+
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -84,6 +86,10 @@ class UserOut(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
 
 
 class Token(BaseModel):

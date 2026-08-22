@@ -1,8 +1,10 @@
 import { BOX_COLOR } from "../helpers";
+import { useLang } from "../LangContext";
 
 const TYPES = ["Wort", "Verb", "Phrase", "Grammatik"];
 
 export function Catalog({ cards, search, onSearch, filterType, onFilterType, onEdit, onDelete }) {
+  const { t } = useLang();
   const list = cards
     .filter((c) => {
       const q = search.trim().toLowerCase();
@@ -10,7 +12,7 @@ export function Catalog({ cards, search, onSearch, filterType, onFilterType, onE
         !q ||
         c.front.toLowerCase().includes(q) ||
         c.back.toLowerCase().includes(q) ||
-        (c.tags || []).some((t) => t.toLowerCase().includes(q));
+        (c.tags || []).some((tag) => tag.toLowerCase().includes(q));
       const matchesType = !filterType || c.type === filterType;
       return matchesQ && matchesType;
     })
@@ -19,37 +21,37 @@ export function Catalog({ cards, search, onSearch, filterType, onFilterType, onE
   return (
     <div className="animate-fadeUp">
       <h1 className="font-mono text-[11px] tracking-[2px] uppercase text-brass font-semibold mb-3.5">
-        Katalog · {cards.length} Karten
+        {t("catalogTitle", cards.length)}
       </h1>
 
       <input
         className="w-full px-3 py-2.5 mb-3 rounded-md border border-[#3a3227] bg-ink-3 text-cream text-sm placeholder:text-muted"
-        placeholder="Suchen: Wort, Übersetzung, Tag…"
+        placeholder={t("searchPlaceholder")}
         value={search}
         onChange={(e) => onSearch(e.target.value)}
       />
 
       <div className="flex gap-1.5 mb-4 flex-wrap">
-        {TYPES.map((t) => (
+        {TYPES.map((ty) => (
           <div
-            key={t}
-            onClick={() => onFilterType(filterType === t ? null : t)}
-            className={`font-mono text-[10px] tracking-wide uppercase px-2.5 py-1 rounded-full border cursor-pointer
+            key={ty}
+            onClick={() => onFilterType(filterType === ty ? null : ty)}
+            className={`font-mono text-[10px] tracking-wide uppercase px-2.5 py-1 rounded-full border cursor-pointer transition-all active:scale-[.95]
                         ${
-                          filterType === t
+                          filterType === ty
                             ? "bg-brass text-ink border-brass font-semibold"
-                            : "text-muted border-[#3a3227]"
+                            : "text-muted border-[#3a3227] hover:text-cream hover:border-brass"
                         }`}
           >
-            {t}
+            {ty}
           </div>
         ))}
       </div>
 
       {list.length === 0 ? (
         <div className="text-center py-10 px-5 text-muted">
-          <div className="font-display text-[15px] text-paper mb-1.5">Keine Karten gefunden</div>
-          Lege eine neue Karte im Tab „Neu" an.
+          <div className="font-display text-[15px] text-paper mb-1.5">{t("noCardsFound")}</div>
+          {t("noCardsHint")}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-2.5">
@@ -75,14 +77,14 @@ export function Catalog({ cards, search, onSearch, filterType, onFilterType, onE
                   {c.level}
                 </span>
                 <span className="font-mono text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-paper-2 text-[#544a3a] border border-paper-line">
-                  Fach {c.box}
+                  {t("box")} {c.box}
                 </span>
                 <div className="ml-auto flex gap-2.5">
-                  <a onClick={() => onEdit(c.id)} className="font-mono text-[11px] text-brass-dark cursor-pointer underline">
-                    bearbeiten
+                  <a onClick={() => onEdit(c.id)} className="font-mono text-[11px] text-brass-dark hover:text-stamp cursor-pointer underline transition-colors">
+                    {t("edit")}
                   </a>
-                  <a onClick={() => onDelete(c.id)} className="font-mono text-[11px] text-brass-dark cursor-pointer underline">
-                    löschen
+                  <a onClick={() => onDelete(c.id)} className="font-mono text-[11px] text-brass-dark hover:text-stamp cursor-pointer underline transition-colors">
+                    {t("delete")}
                   </a>
                 </div>
               </div>

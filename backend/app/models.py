@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, String, Text
@@ -30,8 +30,8 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    hashed_password = Column(String(255), nullable=True)  # null for Google-only accounts
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class Card(Base):
@@ -60,4 +60,4 @@ class Card(Base):
     due_date = Column(Date, nullable=False, default=date.today)
 
     embedding = Column(Vector(settings.EMBEDDING_DIM), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))

@@ -12,7 +12,12 @@ export function clearToken() {
 
 export async function api(path, options = {}) {
   const token = getToken();
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const lang = localStorage.getItem("lang") || "de";
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Lang": lang,
+    ...(options.headers || {}),
+  };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(API_BASE + path, { ...options, headers });

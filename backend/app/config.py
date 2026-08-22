@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -23,8 +23,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 1 week — personal-use app, not high-security
 
-    class Config:
-        env_file = ".env"
+    # Google Sign-In. Leave empty to disable — /auth/google returns 501 and
+    # the frontend simply won't render the Google button. Get this from
+    # Google Cloud Console → APIs & Services → Credentials → OAuth client ID
+    # (type "Web application"). It's a public identifier, not a secret.
+    GOOGLE_CLIENT_ID: str = ""
+
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 settings = Settings()

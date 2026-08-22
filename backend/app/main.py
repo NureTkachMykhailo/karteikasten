@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -6,7 +8,17 @@ from .config import settings
 from .database import Base, engine
 from .routers import ai, auth, cards
 
-app = FastAPI(title="Karteikasten API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.commit()
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="Karteikasten API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,14 +30,6 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(cards.router)
 app.include_router(ai.router)
-
-
-@app.on_event("startup")
-def on_startup():
-    with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        conn.commit()
-    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/health")

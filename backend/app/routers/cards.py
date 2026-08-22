@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user
+from ..lang import Lang, get_lang, msg
 from ..services import llm
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -34,8 +35,9 @@ def create_card(
     card: schemas.CardCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    lang: Lang = Depends(get_lang),
 ):
-    embedding = llm.get_embedding(f"{card.front} {card.back}")
+    embedding = llm.get_embedding(f"{card.front} {card.back}", lang=lang)
     db_card = models.Card(**card.model_dump(), embedding=embedding, owner_id=current_user.id)
     db.add(db_card)
     db.commit()
@@ -43,14 +45,10 @@ def create_card(
     return db_card
 
 
-def _get_owned_or_404(db: Session, card_id: UUID, user: models.User) -> models.Card:
-    card = (
-        db.query(models.Card)
-        .filter(models.Card.id == card_id, models.Card.owner_id == user.id)
-        .first()
-    )
+def _get_owned_or_404(db: Session, card_id: UUID, user: models.User, lang: Lang) -> models.Card:
+    card = db.query(models.Card).filter(models.Card.id == card_id, models.Card.owner_id == user.id).first()
     if not card:
-        raise HTTPException(404, "Karte nicht gefunden")
+        raise HTTPException(404, msg("card_not_found", lang))
     return card
 
 
@@ -60,11 +58,12 @@ def update_card(
     payload: schemas.CardUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    lang: Lang = Depends(get_lang),
 ):
-    card = _get_owned_or_404(db, card_id, current_user)
+    card = _get_owned_or_404(db, card_id, current_user, lang)
     for field, value in payload.model_dump().items():
         setattr(card, field, value)
-    card.embedding = llm.get_embedding(f"{card.front} {card.back}")
+    card.embedding = llm.get_embedding(f"{card.front} {card.back}", lang=lang)
     db.commit()
     db.refresh(card)
     return card
@@ -75,8 +74,9 @@ def delete_card(
     card_id: UUID,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    lang: Lang = Depends(get_lang),
 ):
-    card = _get_owned_or_404(db, card_id, current_user)
+    card = _get_owned_or_404(db, card_id, current_user, lang)
     db.delete(card)
     db.commit()
 
@@ -87,8 +87,9 @@ def review_card(
     payload: schemas.ReviewRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    lang: Lang = Depends(get_lang),
 ):
-    card = _get_owned_or_404(db, card_id, current_user)
+    card = _get_owned_or_404(db, card_id, current_user, lang)
 
     if payload.rating == "again":
         card.box = 1
@@ -100,7 +101,7 @@ def review_card(
         card.box = min(5, card.box + 2)
         card.due_date = date.today() + timedelta(days=LEITNER_DAYS[card.box])
     else:
-        raise HTTPException(422, "rating muss again, good oder easy sein")
+        raise HTTPException(422, msg("invalid_rating", lang))
 
     db.commit()
     db.refresh(card)

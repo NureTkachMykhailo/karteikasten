@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, getToken, clearToken } from "./api";
 import { todayStr, addDays } from "./helpers";
+import { useLang } from "./LangContext";
 import { Header, Tabs } from "./components/Header";
 import { Toast } from "./components/UI";
 import { Login } from "./components/Login";
@@ -10,6 +11,8 @@ import { Review } from "./components/Review";
 import { CardForm } from "./components/CardForm";
 
 export default function App() {
+  const { t } = useLang();
+
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -39,10 +42,10 @@ export default function App() {
       const data = await api("/cards/");
       setCards(data);
     } catch (err) {
-      showToast("Backend nicht erreichbar: " + err.message);
+      showToast(t("backendUnreachable", err.message));
     }
     setLoading(false);
-  }, [showToast]);
+  }, [showToast, t]);
 
   const checkAuth = useCallback(async () => {
     if (!getToken()) {
@@ -71,19 +74,19 @@ export default function App() {
   }
 
   function dueToday() {
-    const t = todayStr();
-    return cards.filter((c) => c.due_date <= t);
+    const today = todayStr();
+    return cards.filter((c) => c.due_date <= today);
   }
 
   function bumpStreak() {
-    const t = todayStr();
-    if (lastReviewDate === t) return;
-    const yesterday = addDays(t, -1);
+    const today = todayStr();
+    if (lastReviewDate === today) return;
+    const yesterday = addDays(today, -1);
     const next = lastReviewDate === yesterday ? streak + 1 : 1;
     setStreak(next);
-    setLastReviewDate(t);
+    setLastReviewDate(today);
     localStorage.setItem("streak", next);
-    localStorage.setItem("lastReviewDate", t);
+    localStorage.setItem("lastReviewDate", today);
   }
 
   async function rateCard(cardId, rating) {
@@ -91,19 +94,19 @@ export default function App() {
       const updated = await api(`/cards/${cardId}/review`, { method: "POST", body: JSON.stringify({ rating }) });
       setCards((prev) => prev.map((c) => (c.id === cardId ? updated : c)));
     } catch (err) {
-      showToast("Fehler beim Speichern: " + err.message);
+      showToast(`${t("savingError")}: ${err.message}`);
     }
     bumpStreak();
   }
 
   async function deleteCard(id) {
-    if (!confirm("Diese Karte wirklich löschen?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       await api(`/cards/${id}`, { method: "DELETE" });
       setCards((prev) => prev.filter((c) => c.id !== id));
-      showToast("Karte gelöscht");
+      showToast(t("cardDeleted"));
     } catch (err) {
-      showToast("Fehler: " + err.message);
+      showToast(`${t("error")}: ${err.message}`);
     }
   }
 
@@ -114,7 +117,7 @@ export default function App() {
       setDialogueDe(res.dialogue_de);
       setDialogueEn(res.dialogue_en);
     } catch (err) {
-      showToast("KI-Fehler: " + err.message);
+      showToast(`${t("aiError")}: ${err.message}`);
     }
     setAiGenerating(false);
   }
@@ -132,7 +135,7 @@ export default function App() {
     return (
       <div className="max-w-[640px] mx-auto px-4 pt-24 text-center text-muted relative z-10">
         <span className="inline-block w-4 h-4 rounded-full border-2 border-cream/25 border-t-brass animate-spin mr-2 align-middle" />
-        Lade Karteikasten…
+        {t("loading")}
       </div>
     );
   }
@@ -159,7 +162,7 @@ export default function App() {
         {loading ? (
           <div className="text-center py-10 px-5 text-muted">
             <span className="inline-block w-4 h-4 rounded-full border-2 border-cream/25 border-t-brass animate-spin mr-2 align-middle" />
-            Lade Karteikasten…
+            {t("loading")}
           </div>
         ) : tab === "dash" ? (
           <Dashboard

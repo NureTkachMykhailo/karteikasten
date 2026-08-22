@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user
+from ..lang import Lang, get_lang, msg
 from ..services import llm
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -15,6 +16,8 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 # Cosine distance below this = close enough to flag as a likely duplicate.
 # Tune this against real data once the catalog has enough cards to test.
 SIMILARITY_THRESHOLD = 0.15
+
+_LANG_NAME = {"de": "German", "en": "English"}
 
 
 def _parse_json_draft(raw: str) -> dict:
@@ -36,11 +39,22 @@ def _parse_json_draft(raw: str) -> dict:
         raise
 
 
+def _normalize_dialogue(text: str) -> str:
+    """
+    Forces every "A:"/"B:" turn onto its own line, regardless of whether the
+    model actually included the line breaks the prompt asked for — some
+    responses come back as one flowing paragraph, which reads badly.
+    """
+    parts = re.split(r"\s*(?=\b[AB]:\s)", text.strip())
+    return "\n".join(p for p in parts if p)
+
+
 @router.post("/generate-card", response_model=schemas.GenerateCardResponse)
 def generate_card(
     req: schemas.GenerateCardRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    lang: Lang = Depends(get_lang),
 ):
     """
     RAG step: embed the topic, pull the 5 nearest existing cards (from this
@@ -50,7 +64,7 @@ def generate_card(
     not saved automatically; saving happens through POST /cards/ once the
     user accepts it.
     """
-    query_embedding = llm.get_embedding(req.topic)
+    query_embedding = llm.get_embedding(req.topic, lang=lang)
 
     similar_rows = (
         db.query(models.Card, models.Card.embedding.cosine_distance(query_embedding).label("distance"))
@@ -76,15 +90,15 @@ def generate_card(
         "back/note/example must be in German except back, which is the English "
         "translation. Match the style and level of the existing cards below and "
         "do not duplicate them.\n"
-        '- If NOT valid: {"error": "<short reason, written in German>"}'
+        f'- If NOT valid: {{"error": "<short reason, written in {_LANG_NAME[lang]}>"}}'
     )
     user = f"Existing similar cards:\n{context}\n\nTopic: {req.topic}"
 
-    raw = llm.chat_completion(system, user, json_mode=True)
+    raw = llm.chat_completion(system, user, json_mode=True, lang=lang)
     try:
         result = _parse_json_draft(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(502, "Die KI hat ungültiges JSON zurückgegeben — bitte erneut versuchen")
+    except json.JSONDecodeError as err:
+        raise HTTPException(502, msg("invalid_json", lang)) from err
 
     if "error" in result:
         return schemas.GenerateCardResponse(
@@ -105,6 +119,7 @@ def generate_dialogue(
     req: schemas.GenerateDialogueRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    lang: Lang = Depends(get_lang),
 ):
     """
     No embeddings here on purpose — selecting "which cards to practice" is a
@@ -120,7 +135,7 @@ def generate_dialogue(
 
     words = query.limit(req.limit).all()
     if not words:
-        raise HTTPException(404, "Keine Karten für diese Filter gefunden")
+        raise HTTPException(404, msg("no_cards_for_filter", lang))
 
     word_list = ", ".join(w.front for w in words)
     system = (
@@ -133,14 +148,14 @@ def generate_dialogue(
     )
     user = f"Words to include: {word_list}"
 
-    raw = llm.chat_completion(system, user, json_mode=True)
+    raw = llm.chat_completion(system, user, json_mode=True, lang=lang)
     try:
         result = _parse_json_draft(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(502, "Die KI hat ungültiges JSON zurückgegeben — bitte erneut versuchen")
+    except json.JSONDecodeError as err:
+        raise HTTPException(502, msg("invalid_json", lang)) from err
 
     return schemas.GenerateDialogueResponse(
-        dialogue_de=result.get("dialogue_de", ""),
-        dialogue_en=result.get("dialogue_en", ""),
+        dialogue_de=_normalize_dialogue(result.get("dialogue_de", "")),
+        dialogue_en=_normalize_dialogue(result.get("dialogue_en", "")),
         used_cards=[schemas.CardOut.model_validate(w) for w in words],
     )

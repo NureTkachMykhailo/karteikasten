@@ -20,8 +20,8 @@ def get_current_user(
         raise HTTPException(401, "Ungültiger oder abgelaufener Token")
     try:
         user_id = uuid.UUID(subject)
-    except ValueError:
-        raise HTTPException(401, "Ungültiger Token")
+    except ValueError as err:
+        raise HTTPException(401, "Ungültiger Token") from err
     user = db.get(models.User, user_id)
     if user is None:
         raise HTTPException(401, "Benutzer nicht gefunden")

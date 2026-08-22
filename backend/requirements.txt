@@ -10,3 +10,5 @@ openai
 python-dotenv
 python-jose[cryptography]
 bcrypt
+google-auth
+requests
